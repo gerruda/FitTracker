@@ -28,8 +28,14 @@ jobs:
         env:
           VITE_BASE_URL: '/FitTracker/'
 
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.DEPLOY_TOKEN }}
           publish_dir: ./dist
+          commit_message: 'Deploy to GitHub Pages'
