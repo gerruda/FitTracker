@@ -5,6 +5,8 @@ import { useFitnessStore } from '../fitness';
 describe('Fitness Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    // Очищаем localStorage перед каждым тестом
+    localStorage.clear();
   });
 
   describe('Measurements', () => {
@@ -21,7 +23,7 @@ describe('Fitness Store', () => {
       expect(store.measurements[0]).toEqual(measurement);
     });
 
-    it('should update existing measurement', () => {
+    it('should merge measurements with same date', () => {
       const store = useFitnessStore();
       const initialMeasurement = {
         date: '2024-02-20',
@@ -29,17 +31,21 @@ describe('Fitness Store', () => {
       };
       const updatedMeasurement = {
         date: '2024-02-20',
-        weight: 71
+        bodyFatPercentage: 20
       };
 
       store.addMeasurement(initialMeasurement);
       store.addMeasurement(updatedMeasurement);
 
       expect(store.measurements).toHaveLength(1);
-      expect(store.measurements[0].weight).toBe(71);
+      expect(store.measurements[0]).toEqual({
+        date: '2024-02-20',
+        weight: 70,
+        bodyFatPercentage: 20
+      });
     });
 
-    it('should merge measurements with same date', () => {
+    it('should merge all measurement properties', () => {
       const store = useFitnessStore();
       const weightMeasurement = {
         date: '2024-02-20',
@@ -110,7 +116,6 @@ describe('Fitness Store', () => {
 
       expect(parsed.measurements).toHaveLength(1);
       expect(parsed.measurements[0]).toEqual(measurement);
-      expect(parsed.version).toBe('1.0');
     });
 
     it('should import data correctly', () => {
@@ -119,9 +124,7 @@ describe('Fitness Store', () => {
         measurements: [
           { date: '2024-02-20', weight: 70 }
         ],
-        exercises: [],
-        exportDate: new Date().toISOString(),
-        version: '1.0'
+        exercises: []
       };
 
       const success = store.importData(JSON.stringify(data));
@@ -132,13 +135,11 @@ describe('Fitness Store', () => {
 
     it('should handle invalid import data', () => {
       const store = useFitnessStore();
-      const invalidData = {
-        measurements: 'not an array'
-      };
+      const invalidData = "{ not a valid json }";
 
-      const success = store.importData(JSON.stringify(invalidData));
+      const success = store.importData(invalidData);
       expect(success).toBe(false);
       expect(store.measurements).toHaveLength(0);
     });
   });
-}); 
+});

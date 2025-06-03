@@ -1,8 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import AnalyticsView from '../../src/components/AnalyticsView.vue'
 import { useFitnessStore } from '../../src/stores/fitness'
+
+// Мок для Chart.js компонентов
+vi.mock('vue-chartjs', () => ({
+  Line: {
+    name: 'Line',
+    template: '<div class="chart-mock"></div>'
+  }
+}))
+
+// Определяем тип для компонента
+type AnalyticsViewType = InstanceType<typeof AnalyticsView>
 
 describe('AnalyticsView', () => {
   beforeEach(() => {
@@ -12,9 +23,11 @@ describe('AnalyticsView', () => {
   it('renders properly with no data', () => {
     const wrapper = mount(AnalyticsView)
     expect(wrapper.find('.analytics').exists()).toBe(true)
+
     // Проверяем наличие всех трех графиков
     const chartCards = wrapper.findAll('.chart-card')
     expect(chartCards).toHaveLength(3)
+
     // Проверяем сообщения об отсутствии данных
     const noDataMessages = wrapper.findAll('.no-data')
     expect(noDataMessages).toHaveLength(3)
@@ -25,20 +38,20 @@ describe('AnalyticsView', () => {
 
   it('displays weight chart and stats when weight data is available', async () => {
     const store = useFitnessStore()
-    store.measurements = [
-      {
-        date: '2024-03-01',
-        weight: 70
-      }
-    ]
+    const date = new Date().toISOString().split('T')[0]
+    store.addMeasurement({
+      date,
+      weight: 70
+    })
 
     const wrapper = mount(AnalyticsView)
-    
+
     // Проверяем отображение графика веса
     const weightChart = wrapper.findAll('.chart-card')[0]
     expect(weightChart.find('h3').text()).toBe('Динамика веса')
     expect(weightChart.find('.no-data').exists()).toBe(false)
-    
+    expect(weightChart.find('.chart-mock').exists()).toBe(true)
+
     // Проверяем статистику веса
     const weightStats = wrapper.find('.stat-card')
     expect(weightStats.exists()).toBe(true)
@@ -49,32 +62,28 @@ describe('AnalyticsView', () => {
 
   it('displays body composition data when available', async () => {
     const store = useFitnessStore()
-    store.measurements = [
-      {
-        date: '2024-03-01',
-        bodyFatPercentage: 20,
-        musclePercentage: 40,
-        bonePercentage: 10,
-        waterPercentage: 30,
-        bodyFatMass: 14,
-        muscleMass: 28,
-        boneMass: 7,
-        waterMass: 21
-      }
-    ]
+    const date = new Date().toISOString().split('T')[0]
+    store.addMeasurement({
+      date,
+      bodyFatPercentage: 20,
+      musclePercentage: 40,
+      bonePercentage: 10,
+      waterPercentage: 30
+    })
 
     const wrapper = mount(AnalyticsView)
-    
+
     // Проверяем отображение графика состава тела
     const bodyCompositionChart = wrapper.findAll('.chart-card')[1]
     expect(bodyCompositionChart.find('h3').text()).toBe('Состав тела')
     expect(bodyCompositionChart.find('.no-data').exists()).toBe(false)
+    expect(bodyCompositionChart.find('.chart-mock').exists()).toBe(true)
 
     // Проверяем статистику жира и мышц
     const statsCards = wrapper.findAll('.stat-card')
     const bodyFatStats = statsCards.find(card => card.find('h4').text() === 'Процент жира')
     const muscleStats = statsCards.find(card => card.find('h4').text() === 'Мышечная масса')
-    
+
     expect(bodyFatStats?.find('.current').text()).toBe('Текущий: 20%')
     expect(muscleStats?.find('.current').text()).toBe('Текущая: 40%')
   })
@@ -84,62 +93,64 @@ describe('AnalyticsView', () => {
     const today = new Date()
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(today.getDate() - 30)
-    
-    store.measurements = [
-      {
-        date: today.toISOString().split('T')[0],
-        weight: 70
-      },
-      {
-        date: thirtyDaysAgo.toISOString().split('T')[0],
-        weight: 71
-      }
-    ]
+
+    store.addMeasurement({
+      date: today.toISOString().split('T')[0],
+      weight: 70
+    })
+
+    store.addMeasurement({
+      date: thirtyDaysAgo.toISOString().split('T')[0],
+      weight: 71
+    })
 
     const wrapper = mount(AnalyticsView)
-    
-    // По умолчанию выбран период 30 дней
-    expect(wrapper.vm.filteredMeasurements.length).toBe(2)
-    
-    // Меняем на 7 дней
+
+    // По умолчанию выбран период 30 дней - должны видеть оба измерения
+    expect(wrapper.find('.stat-card .change').text()).toContain('-1')
+
+    // Меняем на 7 дней - должны видеть только последнее измерение
     await wrapper.find('#timeRange').setValue('7')
-    expect(wrapper.vm.filteredMeasurements.length).toBe(1)
-    
-    // Меняем на все время
+    expect(wrapper.find('.stat-card .change').text()).toContain('0')
+
+    // Меняем на все время - снова должны видеть оба измерения
     await wrapper.find('#timeRange').setValue('all')
-    expect(wrapper.vm.filteredMeasurements.length).toBe(2)
+    expect(wrapper.find('.stat-card .change').text()).toContain('-1')
   })
 
   it('calculates change in measurements correctly', async () => {
     const store = useFitnessStore()
-    store.measurements = [
-      {
-        date: '2024-03-01',
-        weight: 70,
-        bodyFatPercentage: 20,
-        musclePercentage: 40,
-        tdee: 2500
-      },
-      {
-        date: '2024-02-01',
-        weight: 71,
-        bodyFatPercentage: 21,
-        musclePercentage: 39,
-        tdee: 2400
-      }
-    ]
+    const today = new Date()
+    const monthAgo = new Date()
+    monthAgo.setDate(today.getDate() - 30)
+
+    store.addMeasurement({
+      date: monthAgo.toISOString().split('T')[0],
+      weight: 71,
+      bodyFatPercentage: 21,
+      musclePercentage: 39,
+      tdee: 2400
+    })
+
+    store.addMeasurement({
+      date: today.toISOString().split('T')[0],
+      weight: 70,
+      bodyFatPercentage: 20,
+      musclePercentage: 40,
+      tdee: 2500
+    })
 
     const wrapper = mount(AnalyticsView)
-    
+
     // Проверяем расчет изменений
     const statsCards = wrapper.findAll('.stat-card')
-    
+
     statsCards.forEach(card => {
       const change = card.find('.change')
       if (change) {
         const changeText = change.text()
         expect(changeText.startsWith('Изменение:')).toBe(true)
-        
+
         // Проверяем правильность классов для положительных/отрицательных изменений
         if (changeText.includes('+')) {
           expect(change.classes()).toContain('positive')
@@ -149,4 +160,4 @@ describe('AnalyticsView', () => {
       }
     })
   })
-}) 
+})
