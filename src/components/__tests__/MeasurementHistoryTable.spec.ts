@@ -1,75 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/vue';
 import { createTestingPinia } from '@pinia/testing';
 import MeasurementHistoryTable from '../MeasurementHistoryTable.vue';
 import { useFitnessStore } from '@/stores/fitness';
+import type { MeasurementData } from '@/types';
 import '@testing-library/jest-dom';
 
 describe('MeasurementHistoryTable', () => {
-  const renderComponent = (type = 'weight') => {
+  const renderComponent = (type: 'weight' | 'body' | 'composition') => {
     return render(MeasurementHistoryTable, {
       props: { type },
       global: {
         plugins: [createTestingPinia({
-          createSpy: vi.fn,
-          initialState: {
-            fitness: {
-              measurements: [
-                {
-                  date: '2024-02-20',
-                  weight: 70,
-                  notes: 'Weight measurement'
-                }
-              ]
-            }
-          }
-        })]
-      }
-    });
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders measurements based on type', () => {
-    renderComponent('weight');
-    expect(screen.getByText('70')).toBeInTheDocument();
-    expect(screen.getByText('Weight measurement')).toBeInTheDocument();
-  });
-
-  it('handles edit and delete actions', async () => {
-    const { emitted } = renderComponent('weight');
-    const store = useFitnessStore();
-    
-    // Test edit action
-    const editButton = screen.getByTitle('Редактировать');
-    await fireEvent.click(editButton);
-    expect(emitted().edit).toBeTruthy();
-    expect(emitted().edit[0][0]).toEqual({
-      date: '2024-02-20',
-      weight: 70,
-      notes: 'Weight measurement'
-    });
-
-    // Test delete action with confirmation
-    vi.spyOn(window, 'confirm').mockImplementation(() => true);
-    const deleteButton = screen.getByTitle('Удалить');
-    await fireEvent.click(deleteButton);
-    expect(store.deleteMeasurement).toHaveBeenCalledWith('2024-02-20');
-
-    // Test delete action without confirmation
-    vi.spyOn(window, 'confirm').mockImplementation(() => false);
-    await fireEvent.click(deleteButton);
-    expect(store.deleteMeasurement).toHaveBeenCalledTimes(1); // Should not increase
-  });
-
-  it('shows empty state when no measurements', () => {
-    render(MeasurementHistoryTable, {
-      props: { type: 'weight' },
-      global: {
-        plugins: [createTestingPinia({
-          createSpy: vi.fn,
           initialState: {
             fitness: {
               measurements: []
@@ -78,6 +20,60 @@ describe('MeasurementHistoryTable', () => {
         })]
       }
     });
-    expect(screen.getByText('История измерений пуста')).toBeInTheDocument();
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
   });
-}); 
+
+  it('renders empty state when no measurements', () => {
+    renderComponent('weight');
+    expect(screen.getByText('Нет записей')).toBeInTheDocument();
+  });
+
+  it('displays weight measurements correctly', async () => {
+    const store = useFitnessStore();
+    const measurement: MeasurementData = {
+      date: '2024-02-20',
+      weight: 70,
+      notes: 'Test note'
+    };
+    store.measurements = [measurement];
+
+    renderComponent('weight');
+    expect(screen.getByText('20.02.2024')).toBeInTheDocument();
+    expect(screen.getByText('70 кг')).toBeInTheDocument();
+    expect(screen.getByText('Test note')).toBeInTheDocument();
+  });
+
+  it('emits edit event when edit button clicked', async () => {
+    const store = useFitnessStore();
+    const measurement: MeasurementData = {
+      date: '2024-02-20',
+      weight: 70
+    };
+    store.measurements = [measurement];
+
+    const { emitted } = renderComponent('weight');
+    const editButton = screen.getByTitle('Редактировать');
+    await fireEvent.click(editButton);
+
+    expect(emitted()).toHaveProperty('edit');
+    expect(emitted().edit[0]).toEqual([measurement]);
+  });
+
+  it('deletes measurement when delete button clicked', async () => {
+    const store = useFitnessStore();
+    const measurement: MeasurementData = {
+      date: '2024-02-20',
+      weight: 70
+    };
+    store.measurements = [measurement];
+
+    renderComponent('weight');
+    const deleteButton = screen.getByTitle('Удалить');
+    await fireEvent.click(deleteButton);
+
+    expect(store.deleteMeasurement).toHaveBeenCalledWith('2024-02-20');
+  });
+});

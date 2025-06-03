@@ -2,116 +2,101 @@
   <div class="exercise-tracker">
     <div class="container">
       <div class="card">
-        <h2>Отслеживание упражнений</h2>
+        <h2>Упражнения</h2>
 
-        <form @submit.prevent="addExercise" class="exercise-form">
-          <div class="form-group">
-            <label for="exerciseName">Название упражнения</label>
-            <input 
-              type="text" 
-              id="exerciseName" 
-              v-model="exerciseData.name" 
-              class="form-control"
-              required
-              list="exerciseList"
-            >
-            <datalist id="exerciseList">
-              <option v-for="name in uniqueExerciseNames" :key="name" :value="name" />
-            </datalist>
-          </div>
-
+        <form @submit.prevent="handleSubmit" class="exercise-form">
           <div class="form-group">
             <label for="date">Дата</label>
-            <input 
-              type="date" 
-              id="date" 
-              v-model="exerciseData.date" 
+            <input
+              type="date"
+              id="date"
+              v-model="exerciseData.date"
               class="form-control"
               required
-            >
+            />
           </div>
 
           <div class="form-group">
-            <label for="exerciseWeight">Вес (кг)</label>
-            <input 
-              type="number" 
-              id="exerciseWeight" 
-              v-model="exerciseData.weight" 
+            <label for="name">Название упражнения</label>
+            <input
+              type="text"
+              id="name"
+              v-model="exerciseData.name"
               class="form-control"
               required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="weight">Вес (кг)</label>
+            <input
+              type="number"
+              id="weight"
+              v-model="exerciseData.weight"
+              class="form-control"
               step="0.5"
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="exerciseReps">Повторения</label>
-            <input 
-              type="number" 
-              id="exerciseReps" 
-              v-model="exerciseData.reps" 
-              class="form-control"
+              min="0"
               required
-              min="1"
-            >
+            />
           </div>
 
-          <button type="submit" class="btn btn-primary">Добавить упражнение</button>
-        </form>
-      </div>
-
-      <div class="card" v-if="selectedExercise">
-        <h3>Прогресс: {{ selectedExercise }}</h3>
-        <div class="chart-container">
-          <Line
-            v-if="exerciseChartData.datasets[0].data.length > 0"
-            :data="exerciseChartData"
-            :options="chartOptions"
-          />
-          <p v-else class="no-data">Нет данных для этого упражнения</p>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>История упражнений</h3>
-        <div class="exercise-filters">
           <div class="form-group">
-            <label for="filterExercise">Фильтр по упражнению</label>
-            <select 
-              id="filterExercise" 
-              v-model="selectedExercise" 
+            <label for="reps">Повторения</label>
+            <input
+              type="number"
+              id="reps"
+              v-model="exerciseData.reps"
               class="form-control"
-            >
+              min="1"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </form>
+
+        <div class="exercise-history">
+          <h3>История упражнений</h3>
+
+          <div class="filter-section">
+            <label for="exerciseFilter">Фильтр по упражнению:</label>
+            <select v-model="selectedExercise" id="exerciseFilter" class="form-control">
               <option value="">Все упражнения</option>
-              <option v-for="name in uniqueExerciseNames" :key="name" :value="name">
-                {{ name }}
+              <option v-for="exercise in uniqueExercises" :key="exercise" :value="exercise">
+                {{ exercise }}
               </option>
             </select>
           </div>
-        </div>
 
-        <div class="exercise-list">
-          <div 
-            v-for="exercise in filteredExercises" 
-            :key="exercise.id" 
-            class="exercise-item"
-          >
-            <div class="exercise-details">
-              <h4>{{ exercise.name }}</h4>
-              <p class="exercise-date">{{ formatDate(exercise.date) }}</p>
-              <p class="exercise-stats">
-                {{ exercise.weight }}кг × {{ exercise.reps }} повт.
-                <span class="one-rep-max">
-                  (1ПМ: {{ exercise.calculatedOneRepMax }}кг)
-                </span>
-              </p>
+          <div class="exercise-list" v-if="filteredExercises.length">
+            <div class="exercise-item" v-for="exercise in filteredExercises" :key="exercise.id">
+              <div class="exercise-header">
+                <div class="exercise-info">
+                  <h4>{{ exercise.name }}</h4>
+                  <span class="date">{{ formatDate(exercise.date) }}</span>
+                </div>
+                <button class="btn btn-icon" @click="deleteExercise(exercise.id)" title="Удалить">
+                  <span>🗑️</span>
+                </button>
+              </div>
+              <div class="exercise-details">
+                <div class="detail-item">
+                  <span class="label">Вес:</span>
+                  <span class="value">{{ exercise.weight }} кг</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Повторения:</span>
+                  <span class="value">{{ exercise.reps }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">1RM:</span>
+                  <span class="value">{{ exercise.calculatedOneRepMax }} кг</span>
+                </div>
+              </div>
             </div>
-            <button 
-              class="btn btn-secondary delete-btn"
-              @click="deleteExercise(exercise.id)"
-              title="Удалить запись"
-            >
-              <span class="mdi mdi-delete"></span>
-            </button>
+          </div>
+          <div class="empty-state" v-else>
+            <p>Нет записей</p>
           </div>
         </div>
       </div>
@@ -120,112 +105,74 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
-import { Line } from 'vue-chartjs';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
-import { useFitnessStore } from '@/stores/fitness';
+import { ref, computed } from 'vue'
+import { useFitnessStore } from '@/stores/fitness'
+import type { ExerciseData } from '@/types'
+import { formatDate } from '@/utils/formatters'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+const store = useFitnessStore()
 
-const store = useFitnessStore();
-const selectedExercise = ref('');
+interface ExerciseForm {
+  id: string
+  name: string
+  date: string
+  weight: number
+  reps: number
+}
 
-const exerciseData = reactive({
-  date: new Date().toISOString().split('T')[0],
+const exerciseData = ref<ExerciseForm>({
+  id: crypto.randomUUID(),
   name: '',
-  weight: undefined as number | undefined,
-  reps: undefined as number | undefined,
-  notes: ''
-});
+  date: new Date().toISOString().split('T')[0],
+  weight: 0,
+  reps: 0,
+})
 
-const uniqueExerciseNames = computed(() => {
-  return [...new Set(store.exercises.map(e => e.name))].sort();
-});
+const selectedExercise = ref('')
 
-const filteredExercises = computed(() => {
-  let exercises = [...store.exercises];
-  
-  if (selectedExercise.value) {
-    exercises = exercises.filter(e => e.name === selectedExercise.value);
+const calculateOneRepMax = (weight: number, reps: number): number => {
+  if (reps === 1) return weight
+  return Math.round(weight * (1 + reps / 30))
+}
+
+const resetForm = () => {
+  exerciseData.value = {
+    id: crypto.randomUUID(),
+    name: '',
+    date: new Date().toISOString().split('T')[0],
+    weight: 0,
+    reps: 0,
   }
-  
-  return exercises.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-});
+}
 
-const exerciseChartData = computed(() => {
-  if (!selectedExercise.value) return { labels: [], datasets: [{ data: [] }] };
-
-  const exercises = store.exercises
-    .filter(e => e.name === selectedExercise.value)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  return {
-    labels: exercises.map(e => formatDate(e.date)),
-    datasets: [
-      {
-        label: 'Вес (кг)',
-        data: exercises.map(e => e.weight),
-        borderColor: '#4CAF50',
-        tension: 0.1
-      },
-      {
-        label: '1ПМ (кг)',
-        data: exercises.map(e => e.calculatedOneRepMax),
-        borderColor: '#2196F3',
-        tension: 0.1
-      }
-    ]
-  };
-});
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'top' as const
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: false
-    }
+const handleSubmit = () => {
+  const exercise: ExerciseData = {
+    id: exerciseData.value.id,
+    name: exerciseData.value.name,
+    date: exerciseData.value.date,
+    weight: exerciseData.value.weight,
+    reps: exerciseData.value.reps,
+    calculatedOneRepMax: calculateOneRepMax(exerciseData.value.weight, exerciseData.value.reps),
   }
-};
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('ru-RU');
-};
-
-const addExercise = () => {
-  if (exerciseData.weight && exerciseData.reps) {
-    const oneRepMax = store.calculateOneRepMax(exerciseData.weight, exerciseData.reps);
-    
-    store.addExercise({
-      ...exerciseData,
-      calculatedOneRepMax: oneRepMax
-    } as ExerciseData);
-
-    // Сброс формы
-    exerciseData.weight = undefined;
-    exerciseData.reps = undefined;
-    exerciseData.date = new Date().toISOString().split('T')[0];
-    
-    // Выбор упражнения в фильтре, если оно еще не выбрано
-    if (!selectedExercise.value) {
-      selectedExercise.value = exerciseData.name;
-    }
-  }
-};
+  store.addExercise(exercise)
+  resetForm()
+}
 
 const deleteExercise = (id: string) => {
-  if (confirm('Вы уверены, что хотите удалить эту запись?')) {
-    const exercises = store.exercises.filter(e => e.id !== id);
-    localStorage.setItem('exercises', JSON.stringify(exercises));
-    // Перезагрузка страницы для обновления данных
-    window.location.reload();
-  }
-};
+  store.deleteExercise(id)
+}
+
+const uniqueExercises = computed(() => {
+  const exercises = new Set(store.exercises.map((e) => e.name))
+  return Array.from(exercises).sort()
+})
+
+const filteredExercises = computed(() => {
+  return store.exercises
+    .filter((e) => !selectedExercise.value || e.name === selectedExercise.value)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+})
 </script>
 
 <style scoped>
@@ -233,78 +180,157 @@ const deleteExercise = (id: string) => {
   padding: 1rem;
 }
 
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.card {
+  background: white;
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  box-shadow: var(--box-shadow);
+}
+
+.card h2 {
+  margin-top: 0;
+  margin-bottom: 2rem;
+  color: var(--primary-color);
+}
+
 .exercise-form {
+  display: grid;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
-.exercise-filters {
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.form-control {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-color-dark);
+}
+
+.exercise-history {
+  margin-top: 2rem;
+}
+
+.exercise-history h3 {
   margin-bottom: 1rem;
+  color: var(--secondary-color);
+}
+
+.filter-section {
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .exercise-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 1rem;
 }
 
 .exercise-item {
+  background: var(--bg-light);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+.exercise-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.exercise-info h4 {
+  margin: 0;
+  color: var(--primary-color);
+}
+
+.date {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+  opacity: 1;
+}
+
+.exercise-details {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.detail-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
 }
 
-.exercise-details h4 {
-  margin: 0;
-  color: var(--secondary-color);
+.label {
+  color: var(--text-muted);
 }
 
-.exercise-date {
-  margin: 0.25rem 0;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.exercise-stats {
-  margin: 0;
+.value {
   font-weight: 500;
 }
 
-.one-rep-max {
-  color: var(--primary-color);
-  margin-left: 0.5rem;
-}
-
-.delete-btn {
-  padding: 0.5rem;
-  min-width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #ff5252;
-}
-
-.delete-btn:hover {
-  background-color: #ff1744;
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem;
 }
 
 @media (max-width: 768px) {
-  .exercise-tracker {
-    padding: 0.5rem;
+  .card {
+    padding: 1rem;
   }
 
-  .exercise-item {
+  .filter-section {
     flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-
-  .delete-btn {
-    align-self: flex-end;
+    align-items: stretch;
   }
 }
-</style> 
+</style>

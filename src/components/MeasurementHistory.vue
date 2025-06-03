@@ -1,104 +1,136 @@
 <template>
   <div class="measurement-history">
-    <h2>История измерений</h2>
-    
-    <div class="actions">
-      <button class="btn btn-danger" @click="clearAll">
-        <span class="mdi mdi-delete-sweep"></span>
-        Очистить всю историю
-      </button>
-    </div>
+    <div class="container">
+      <div class="card">
+        <h2>История измерений</h2>
 
-    <div class="measurements-list" v-if="store.sortedMeasurements.length">
-      <div class="measurement-item" v-for="measurement in store.sortedMeasurements" :key="measurement.date">
-        <div class="measurement-header">
-          <h3>{{ formatDate(measurement.date) }}</h3>
-          <button class="btn btn-icon" @click="deleteMeasurement(measurement.date)">
-            <span class="mdi mdi-delete"></span>
-          </button>
+        <div class="actions">
+          <button class="btn btn-danger" @click="clearHistory">Очистить историю</button>
         </div>
 
-        <div class="measurement-details">
-          <div class="detail-item">
-            <span class="label">Вес:</span>
-            <span class="value">{{ measurement.weight }} кг</span>
+        <div class="history-list">
+          <template v-if="store.measurements.length">
+            <div
+              class="measurement-item"
+              v-for="measurement in store.measurements"
+              :key="measurement.date"
+            >
+              <div class="measurement-header">
+                <div class="measurement-info">
+                  <h4>{{ formatDate(measurement.date) }}</h4>
+                </div>
+                <div class="measurement-actions">
+                  <button
+                    class="btn btn-icon"
+                    @click="editMeasurement(measurement)"
+                    title="Редактировать"
+                  >
+                    <span>✏️</span>
+                  </button>
+                  <button
+                    class="btn btn-icon"
+                    @click="deleteMeasurement(measurement.date)"
+                    title="Удалить"
+                  >
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="measurement-details">
+                <template v-if="measurement.weight">
+                  <div class="detail-item">
+                    <span class="label">Вес:</span>
+                    <span class="value">{{ measurement.weight }} кг</span>
+                  </div>
+                </template>
+
+                <template v-if="measurement.bodyFatPercentage">
+                  <div class="detail-item">
+                    <span class="label">Жир:</span>
+                    <span class="value">{{ measurement.bodyFatPercentage }}%</span>
+                  </div>
+                </template>
+
+                <template v-if="measurement.musclePercentage">
+                  <div class="detail-item">
+                    <span class="label">Мышцы:</span>
+                    <span class="value">{{ measurement.musclePercentage }}%</span>
+                  </div>
+                </template>
+
+                <template v-if="measurement.waterPercentage">
+                  <div class="detail-item">
+                    <span class="label">Вода:</span>
+                    <span class="value">{{ measurement.waterPercentage }}%</span>
+                  </div>
+                </template>
+
+                <template v-if="measurement.measurements">
+                  <div
+                    class="detail-item"
+                    v-for="(value, key) in measurement.measurements"
+                    :key="key"
+                  >
+                    <span class="label">{{ getMeasurementLabel(key) }}:</span>
+                    <span class="value">{{ value }} см</span>
+                  </div>
+                </template>
+
+                <template v-if="measurement.notes">
+                  <div class="detail-item">
+                    <span class="label">Примечания:</span>
+                    <span class="value">{{ measurement.notes }}</span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+          <div v-else class="empty-state">
+            <p>Нет записей</p>
           </div>
-
-          <template v-if="measurement.bodyFatPercentage">
-            <div class="detail-item">
-              <span class="label">Жир:</span>
-              <span class="value">{{ measurement.bodyFatPercentage }}% ({{ measurement.bodyFatMass }} кг)</span>
-            </div>
-          </template>
-
-          <template v-if="measurement.musclePercentage">
-            <div class="detail-item">
-              <span class="label">Мышцы:</span>
-              <span class="value">{{ measurement.musclePercentage }}% ({{ measurement.muscleMass }} кг)</span>
-            </div>
-          </template>
-
-          <template v-if="measurement.waterPercentage">
-            <div class="detail-item">
-              <span class="label">Вода:</span>
-              <span class="value">{{ measurement.waterPercentage }}% ({{ measurement.waterMass }} кг)</span>
-            </div>
-          </template>
-
-          <template v-if="measurement.bonePercentage">
-            <div class="detail-item">
-              <span class="label">Кости:</span>
-              <span class="value">{{ measurement.bonePercentage }}% ({{ measurement.boneMass }} кг)</span>
-            </div>
-          </template>
-
-          <template v-if="measurement.tdee">
-            <div class="detail-item">
-              <span class="label">TDEE:</span>
-              <span class="value">{{ measurement.tdee }} ккал</span>
-            </div>
-          </template>
-
-          <template v-if="measurement.notes">
-            <div class="notes">
-              <p>{{ measurement.notes }}</p>
-            </div>
-          </template>
         </div>
       </div>
-    </div>
-
-    <div class="empty-state" v-else>
-      <p>История измерений пуста</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useFitnessStore } from '@/stores/fitness';
+import { useFitnessStore } from '@/stores/fitness'
+import type { MeasurementData } from '@/types'
+import { formatDate } from '@/utils/formatters'
 
-const store = useFitnessStore();
+const store = useFitnessStore()
 
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr);
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date);
-};
+const clearHistory = () => {
+  if (confirm('Вы уверены, что хотите удалить всю историю измерений?')) {
+    store.clearMeasurements()
+  }
+}
 
 const deleteMeasurement = (date: string) => {
   if (confirm('Вы уверены, что хотите удалить это измерение?')) {
-    store.deleteMeasurement(date);
+    store.deleteMeasurement(date)
   }
-};
+}
 
-const clearAll = () => {
-  store.clearAllMeasurements();
-};
+const editMeasurement = (measurement: MeasurementData) => {
+  store.setEditingMeasurement(measurement)
+}
+
+const getMeasurementLabel = (key: string): string => {
+  const labels: Record<string, string> = {
+    chest: 'Грудь',
+    waist: 'Талия',
+    hips: 'Бедра',
+    arms: 'Бицепс',
+    forearms: 'Предплечье',
+    thighs: 'Бедро',
+    calves: 'Голень',
+    neck: 'Шея',
+  }
+  return labels[key] || key
+}
 </script>
 
 <style scoped>
@@ -196,11 +228,11 @@ const clearAll = () => {
   .measurement-item {
     padding: 1rem;
   }
-  
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
   }
 }
-</style> 
+</style>
