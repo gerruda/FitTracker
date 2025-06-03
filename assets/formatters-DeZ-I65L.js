@@ -1,0 +1,1 @@
+const a=t=>{const e=new Date(t);return new Intl.DateTimeFormat("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(e)},r=t=>({chest:"Грудь",waist:"Талия",hips:"Бедра",arms:"Бицепс",forearms:"Предплечье",thighs:"Бедро",calves:"Голень",neck:"Шея"})[t]||t;export{a as f,r as g};
