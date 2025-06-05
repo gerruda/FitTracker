@@ -1,4 +1,8 @@
 import './assets/styles/main.css'
+// Регистрируем Service Worker только для веб-версии
+if (!(window as any).Capacitor) {
+  import('./registerServiceWorker')
+}
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
