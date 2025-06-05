@@ -5,6 +5,18 @@
         <h2>Упражнения</h2>
 
         <form @submit.prevent="handleSubmit" class="exercise-form">
+          <div class="form-header">
+            <h3>{{ isEditing ? 'Редактирование упражнения' : 'Новое упражнение' }}</h3>
+            <button
+              v-if="isEditing"
+              type="button"
+              class="btn btn-secondary"
+              @click="resetForm"
+            >
+              Отменить
+            </button>
+          </div>
+
           <div class="form-group">
             <label for="date">Дата</label>
             <input
@@ -18,13 +30,29 @@
 
           <div class="form-group">
             <label for="name">Название упражнения</label>
-            <input
-              type="text"
-              id="name"
-              v-model="exerciseData.name"
-              class="form-control"
-              required
-            />
+            <div class="exercise-name-input">
+              <select
+                v-if="uniqueExercises.length && !isEditing"
+                v-model="exerciseData.name"
+                class="form-control"
+                @change="handleExerciseSelect"
+              >
+                <option value="">Новое упражнение</option>
+                <option v-for="exercise in uniqueExercises" :key="exercise" :value="exercise">
+                  {{ exercise }}
+                </option>
+              </select>
+              <input
+                v-if="isEditing || !exerciseData.name || !uniqueExercises.includes(exerciseData.name)"
+                type="text"
+                id="newExercise"
+                v-model="exerciseData.name"
+                class="form-control"
+                :readonly="isEditing"
+                placeholder="Введите название упражнения"
+                required
+              />
+            </div>
           </div>
 
           <div class="form-group">
@@ -52,8 +80,17 @@
             />
           </div>
 
-          <button type="submit" class="btn btn-primary">Сохранить</button>
+          <button type="submit" class="btn btn-primary">
+            {{ isEditing ? 'Сохранить изменения' : 'Сохранить' }}
+          </button>
         </form>
+
+        <div v-if="selectedExercise" class="exercise-charts">
+          <ExerciseChart
+            :exercise-data="store.exercises"
+            :exercise-name="selectedExercise"
+          />
+        </div>
 
         <div class="exercise-history">
           <h3>История упражнений</h3>
@@ -75,9 +112,14 @@
                   <h4>{{ exercise.name }}</h4>
                   <span class="date">{{ formatDate(exercise.date) }}</span>
                 </div>
-                <button class="btn btn-icon" @click="deleteExercise(exercise.id)" title="Удалить">
-                  <span>🗑️</span>
-                </button>
+                <div class="exercise-actions">
+                  <button class="btn btn-icon" @click="editExercise(exercise)" title="Редактировать">
+                    <span>✏️</span>
+                  </button>
+                  <button class="btn btn-icon" @click="deleteExercise(exercise.id)" title="Удалить">
+                    <span>🗑️</span>
+                  </button>
+                </div>
               </div>
               <div class="exercise-details">
                 <div class="detail-item">
@@ -109,6 +151,7 @@ import { ref, computed } from 'vue'
 import { useFitnessStore } from '@/stores/fitness'
 import type { ExerciseData } from '@/types'
 import { formatDate } from '@/utils/formatters'
+import ExerciseChart from './ExerciseChart.vue'
 
 const store = useFitnessStore()
 
@@ -128,11 +171,12 @@ const exerciseData = ref<ExerciseForm>({
   reps: 0,
 })
 
+const isEditing = ref(false)
+
 const selectedExercise = ref('')
 
 const calculateOneRepMax = (weight: number, reps: number): number => {
-  if (reps === 1) return weight
-  return Math.round(weight * (1 + reps / 30))
+  return store.calculateOneRepMax(weight, reps)
 }
 
 const resetForm = () => {
@@ -143,6 +187,7 @@ const resetForm = () => {
     weight: 0,
     reps: 0,
   }
+  isEditing.value = false
 }
 
 const handleSubmit = () => {
@@ -155,12 +200,32 @@ const handleSubmit = () => {
     calculatedOneRepMax: calculateOneRepMax(exerciseData.value.weight, exerciseData.value.reps),
   }
 
-  store.addExercise(exercise)
+  if (isEditing.value) {
+    store.updateExercise(exercise)
+  } else {
+    store.addExercise(exercise)
+  }
+
+  selectedExercise.value = exercise.name
   resetForm()
 }
 
+const editExercise = (exercise: ExerciseData) => {
+  exerciseData.value = {
+    id: exercise.id,
+    name: exercise.name,
+    date: exercise.date,
+    weight: exercise.weight,
+    reps: exercise.reps,
+  }
+  isEditing.value = true
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 const deleteExercise = (id: string) => {
-  store.deleteExercise(id)
+  if (confirm('Вы уверены, что хотите удалить это упражнение?')) {
+    store.deleteExercise(id)
+  }
 }
 
 const uniqueExercises = computed(() => {
@@ -173,6 +238,12 @@ const filteredExercises = computed(() => {
     .filter((e) => !selectedExercise.value || e.name === selectedExercise.value)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 })
+
+const handleExerciseSelect = () => {
+  if (exerciseData.value.name === '') {
+    exerciseData.value.name = ''
+  }
+}
 </script>
 
 <style scoped>
@@ -213,6 +284,11 @@ const filteredExercises = computed(() => {
 .form-group label {
   color: var(--text-muted);
   font-weight: 500;
+}
+
+.exercise-name-input {
+  display: flex;
+  gap: 1rem;
 }
 
 .form-control {
@@ -285,6 +361,11 @@ const filteredExercises = computed(() => {
   color: var(--text-muted);
 }
 
+.exercise-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .btn-icon {
   background: none;
   border: none;
@@ -321,6 +402,34 @@ const filteredExercises = computed(() => {
   text-align: center;
   color: var(--text-muted);
   padding: 2rem;
+}
+
+.exercise-charts {
+  margin: 2rem 0;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.form-header h3 {
+  margin: 0;
+  color: var(--secondary-color);
+}
+
+.btn-secondary {
+  background: var(--bg-light);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--border-color);
 }
 
 @media (max-width: 768px) {

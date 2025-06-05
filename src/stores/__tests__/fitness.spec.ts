@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useFitnessStore } from '../fitness';
+import type { ExerciseData } from '@/types';
 
 describe('Fitness Store', () => {
   beforeEach(() => {
@@ -140,6 +141,83 @@ describe('Fitness Store', () => {
       const success = store.importData(invalidData);
       expect(success).toBe(false);
       expect(store.measurements).toHaveLength(0);
+    });
+  });
+
+  describe('Exercise Management', () => {
+    const mockExercise: ExerciseData = {
+      id: '1',
+      name: 'Приседания',
+      date: '2024-03-14',
+      weight: 100,
+      reps: 5,
+      calculatedOneRepMax: 115
+    };
+
+    it('should add exercise', () => {
+      const store = useFitnessStore();
+      store.addExercise(mockExercise);
+      expect(store.exercises).toHaveLength(1);
+      expect(store.exercises[0]).toEqual(mockExercise);
+    });
+
+    it('should update exercise', () => {
+      const store = useFitnessStore();
+      store.addExercise(mockExercise);
+
+      const updatedExercise = {
+        ...mockExercise,
+        weight: 110,
+        reps: 6,
+        calculatedOneRepMax: 130
+      };
+
+      store.updateExercise(updatedExercise);
+      expect(store.exercises).toHaveLength(1);
+      expect(store.exercises[0]).toEqual(updatedExercise);
+    });
+
+    it('should delete exercise', () => {
+      const store = useFitnessStore();
+      store.addExercise(mockExercise);
+      expect(store.exercises).toHaveLength(1);
+
+      store.deleteExercise(mockExercise.id);
+      expect(store.exercises).toHaveLength(0);
+    });
+
+    it('should calculate one rep max correctly', () => {
+      const store = useFitnessStore();
+      const weight = 100;
+      const reps = 5;
+
+      // Проверяем формулу Брзыцки: weight * (36 / (37 - reps))
+      const expectedOneRepMax = Math.round(weight * (36 / (37 - reps)));
+      const calculatedOneRepMax = store.calculateOneRepMax(weight, reps);
+
+      expect(calculatedOneRepMax).toBe(expectedOneRepMax);
+    });
+
+    it('should persist exercises to localStorage', () => {
+      const store = useFitnessStore();
+      store.addExercise(mockExercise);
+
+      // Проверяем, что данные сохранились в localStorage
+      const savedExercises = JSON.parse(localStorage.getItem('exercises') || '[]');
+      expect(savedExercises).toHaveLength(1);
+      expect(savedExercises[0]).toEqual(mockExercise);
+    });
+
+    it('should load exercises from localStorage', () => {
+      // Сначала сохраняем данные в localStorage
+      localStorage.setItem('exercises', JSON.stringify([mockExercise]));
+
+      // Создаем новый экземпляр store и загружаем данные
+      const store = useFitnessStore();
+      store.loadExercises();
+
+      expect(store.exercises).toHaveLength(1);
+      expect(store.exercises[0]).toEqual(mockExercise);
     });
   });
 });

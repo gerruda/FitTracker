@@ -35,7 +35,7 @@ describe('WeightInput', () => {
 
   it('handles form submission with valid data', async () => {
     renderComponent();
-    const store = useFitnessStore();
+    useFitnessStore();
     const today = new Date().toISOString().split('T')[0];
 
     // Fill in the form
@@ -46,7 +46,7 @@ describe('WeightInput', () => {
     await fireEvent.click(screen.getByText('Сохранить'));
 
     // Verify store action was called with correct data
-    expect(store.addMeasurement).toHaveBeenCalledWith({
+    expect(useFitnessStore().addMeasurement).toHaveBeenCalledWith({
       date: today,
       weight: 70.5,
       notes: 'Test weight measurement'
@@ -66,7 +66,7 @@ describe('WeightInput', () => {
 
   it('clears form after successful submission', async () => {
     renderComponent();
-    const store = useFitnessStore();
+    useFitnessStore();
 
     // Fill in the form
     await fireEvent.update(screen.getByLabelText('Вес (кг)'), '70.5');
@@ -82,7 +82,7 @@ describe('WeightInput', () => {
 
   it('handles decimal values correctly', async () => {
     renderComponent();
-    const store = useFitnessStore();
+    useFitnessStore();
     const today = new Date().toISOString().split('T')[0];
 
     // Fill in the form with decimal value
@@ -92,7 +92,7 @@ describe('WeightInput', () => {
     await fireEvent.click(screen.getByText('Сохранить'));
 
     // Verify store action was called with correct decimal value
-    expect(store.addMeasurement).toHaveBeenCalledWith({
+    expect(useFitnessStore().addMeasurement).toHaveBeenCalledWith({
       date: today,
       weight: 70.5,
       notes: ''
@@ -101,7 +101,7 @@ describe('WeightInput', () => {
 
   it('handles integer values correctly', async () => {
     renderComponent();
-    const store = useFitnessStore();
+    useFitnessStore();
     const today = new Date().toISOString().split('T')[0];
 
     // Fill in the form with integer value
@@ -111,7 +111,7 @@ describe('WeightInput', () => {
     await fireEvent.click(screen.getByText('Сохранить'));
 
     // Verify store action was called with correct integer value
-    expect(store.addMeasurement).toHaveBeenCalledWith({
+    expect(useFitnessStore().addMeasurement).toHaveBeenCalledWith({
       date: today,
       weight: 70,
       notes: ''

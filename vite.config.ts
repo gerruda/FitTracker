@@ -10,10 +10,10 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
-  base: process.env.VITE_BASE_URL || '/',
+  base: '/FitTracker/',
   resolve: {
     alias: {
-      '@': '/src'
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
 })

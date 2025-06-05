@@ -31,6 +31,14 @@ export const useFitnessStore = defineStore('fitness', {
       this.saveExercises();
     },
 
+    updateExercise(exercise: ExerciseData) {
+      const index = this.exercises.findIndex(e => e.id === exercise.id);
+      if (index !== -1) {
+        this.exercises[index] = exercise;
+        this.saveExercises();
+      }
+    },
+
     deleteExercise(id: string) {
       this.exercises = this.exercises.filter((e: ExerciseData) => e.id !== id);
       this.saveExercises();
@@ -41,7 +49,7 @@ export const useFitnessStore = defineStore('fitness', {
     },
 
     calculateOneRepMax(weight: number, reps: number): number {
-      // Формула Брзыцки
+      // Формула Брзыцки для расчета 1ПМ
       return Math.round(weight * (36 / (37 - reps)));
     },
 
@@ -128,4 +136,4 @@ export const useFitnessStore = defineStore('fitness', {
       localStorage.setItem('hasSeenIntro', String(value));
     }
   }
-}); 
+});

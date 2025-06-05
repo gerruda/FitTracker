@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import AnalyticsView from '../../src/components/AnalyticsView.vue'
+import AnalyticsView from '../../src/views/AnalyticsView.vue'
 import { useFitnessStore } from '../../src/stores/fitness'
 
 // Мок для Chart.js компонентов
@@ -11,9 +11,6 @@ vi.mock('vue-chartjs', () => ({
     template: '<div class="chart-mock"></div>'
   }
 }))
-
-// Определяем тип для компонента
-type AnalyticsViewType = InstanceType<typeof AnalyticsView>
 
 describe('AnalyticsView', () => {
   beforeEach(() => {
