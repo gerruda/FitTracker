@@ -2,7 +2,7 @@
   <div class="weight-input">
     <div class="card">
       <h2>Запись веса</h2>
-      
+
       <div class="guidelines-card">
         <h3>📝 Рекомендации для точного измерения</h3>
         <ul>
@@ -22,10 +22,10 @@
       <form @submit.prevent="saveWeight" class="measurement-form">
         <div class="form-group">
           <label for="date">Дата</label>
-          <input 
-            type="date" 
-            id="date" 
-            v-model="weightData.date" 
+          <input
+            type="date"
+            id="date"
+            v-model="weightData.date"
             class="form-control"
             required
           >
@@ -33,10 +33,10 @@
 
         <div class="form-group">
           <label for="weight">Вес (кг)</label>
-          <input 
-            type="number" 
-            id="weight" 
-            v-model="weightData.weight" 
+          <input
+            type="number"
+            id="weight"
+            v-model="weightData.weight"
             class="form-control"
             step="0.1"
             required
@@ -45,12 +45,23 @@
 
         <div class="form-group">
           <label for="notes">Примечания</label>
-          <textarea 
-            id="notes" 
-            v-model="weightData.notes" 
+          <textarea
+            id="notes"
+            v-model="weightData.notes"
             class="form-control"
             placeholder="Например: после тренировки, натощак, etc."
           ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="enableReminders"
+              @change="handleReminderToggle"
+            >
+            Включить ежедневные напоминания
+          </label>
         </div>
 
         <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -62,12 +73,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
 import { useFitnessStore } from '@/stores/fitness';
 import MeasurementHistoryTable from './MeasurementHistoryTable.vue';
+import { NotificationService } from '@/services/notifications';
 import type { MeasurementData } from '@/types';
 
 const store = useFitnessStore();
+const enableReminders = ref(false);
 
 const weightData = reactive({
   date: new Date().toISOString().split('T')[0],
@@ -75,7 +88,7 @@ const weightData = reactive({
   notes: '',
 });
 
-onMounted(() => {
+onMounted(async () => {
   // Если есть измерение для редактирования, заполняем форму
   if (store.editingMeasurement) {
     const measurement = store.editingMeasurement;
@@ -85,7 +98,18 @@ onMounted(() => {
     // Очищаем редактируемое измерение
     store.setEditingMeasurement(null);
   }
+
+  // Запрашиваем разрешение на уведомления при монтировании компонента
+  await NotificationService.requestPermissions();
 });
+
+const handleReminderToggle = async () => {
+  if (enableReminders.value) {
+    await NotificationService.scheduleWeightReminder();
+  } else {
+    await NotificationService.cancelAllNotifications();
+  }
+};
 
 const saveWeight = () => {
   if (weightData.weight) {
@@ -154,4 +178,16 @@ textarea.form-control {
   min-height: 100px;
   resize: vertical;
 }
-</style> 
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+</style>
