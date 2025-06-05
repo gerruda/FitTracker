@@ -87,8 +87,7 @@
 
         <div v-if="selectedExercise" class="exercise-charts">
           <ExerciseChart
-            :exercise-data="store.exercises"
-            :exercise-name="selectedExercise"
+            :exercises="store.exercises.filter((e: ExerciseData) => e.name === selectedExercise)"
           />
         </div>
 

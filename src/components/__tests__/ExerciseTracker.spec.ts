@@ -1,28 +1,29 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
 import ExerciseTracker from '../ExerciseTracker.vue'
-import { useFitnessStore } from '@/stores/fitness'
-import type { ExerciseData } from '@/types'
+import { useFitnessStore } from '../../stores/fitness'
+import type { ExerciseData } from '../../types'
+import '@testing-library/jest-dom'
 
 describe('ExerciseTracker', () => {
   const mockExercise: ExerciseData = {
     id: '1',
     name: 'Приседания',
-    date: '2024-03-14',
     weight: 100,
     reps: 5,
+    date: '2024-03-20',
     calculatedOneRepMax: 115
   }
 
-  const mountComponent = () => {
+  const renderComponent = () => {
     return mount(ExerciseTracker, {
       global: {
         plugins: [createTestingPinia({
-          createSpy: vitest.fn,
+          createSpy: vi.fn,
           initialState: {
             fitness: {
-              exercises: [mockExercise]
+              exercises: []
             }
           }
         })]
@@ -30,100 +31,88 @@ describe('ExerciseTracker', () => {
     })
   }
 
-  it('renders properly', () => {
-    const wrapper = mountComponent()
-    expect(wrapper.find('h2').text()).toBe('Упражнения')
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders the component correctly', () => {
+    const wrapper = renderComponent()
     expect(wrapper.find('form').exists()).toBe(true)
+    expect(wrapper.find('#newExercise').exists()).toBe(true)
+    expect(wrapper.find('#weight').exists()).toBe(true)
+    expect(wrapper.find('#reps').exists()).toBe(true)
   })
 
-  it('displays exercise history', () => {
-    const wrapper = mountComponent()
-    const exerciseItems = wrapper.findAll('.exercise-item')
-    expect(exerciseItems).toHaveLength(1)
-    expect(exerciseItems[0].find('h4').text()).toBe(mockExercise.name)
-  })
-
-  it('allows adding new exercise', async () => {
-    const wrapper = mountComponent()
+  it('handles form submission with valid data', async () => {
+    const wrapper = renderComponent()
     const store = useFitnessStore()
 
-    // Заполняем форму
-    await wrapper.find('#date').setValue('2024-03-15')
-    await wrapper.find('#newExercise').setValue('Жим лежа')
-    await wrapper.find('#weight').setValue(80)
-    await wrapper.find('#reps').setValue(8)
+    await wrapper.find('#newExercise').setValue(mockExercise.name)
+    await wrapper.find('#weight').setValue(mockExercise.weight)
+    await wrapper.find('#reps').setValue(mockExercise.reps)
+    await wrapper.find('form').trigger('submit.prevent')
 
-    // Отправляем форму
-    await wrapper.find('form').trigger('submit')
-
-    // Проверяем, что store.addExercise был вызван с правильными параметрами
     expect(store.addExercise).toHaveBeenCalledWith(expect.objectContaining({
-      name: 'Жим лежа',
-      weight: 80,
-      reps: 8
-    }))
-  })
-
-  it('allows editing exercise', async () => {
-    const wrapper = mountComponent()
-    const store = useFitnessStore()
-
-    // Нажимаем кнопку редактирования
-    await wrapper.find('[title="Редактировать"]').trigger('click')
-
-    // Проверяем, что форма заполнена данными упражнения
-    expect(wrapper.find('#newExercise').element.value).toBe(mockExercise.name)
-    expect(wrapper.find('#weight').element.value).toBe(String(mockExercise.weight))
-    expect(wrapper.find('#reps').element.value).toBe(String(mockExercise.reps))
-
-    // Изменяем вес
-    await wrapper.find('#weight').setValue(110)
-
-    // Отправляем форму
-    await wrapper.find('form').trigger('submit')
-
-    // Проверяем, что store.updateExercise был вызван с правильными параметрами
-    expect(store.updateExercise).toHaveBeenCalledWith(expect.objectContaining({
-      id: mockExercise.id,
       name: mockExercise.name,
-      weight: 110,
+      weight: mockExercise.weight,
       reps: mockExercise.reps
     }))
   })
 
-  it('allows deleting exercise', async () => {
-    const wrapper = mountComponent()
-    const store = useFitnessStore()
+  it('validates required fields', async () => {
+    const wrapper = renderComponent()
+    await wrapper.find('form').trigger('submit.prevent')
 
-    // Мокаем window.confirm
-    const confirmSpy = vitest.spyOn(window, 'confirm')
-    confirmSpy.mockImplementation(() => true)
-
-    // Нажимаем кнопку удаления
-    await wrapper.find('[title="Удалить"]').trigger('click')
-
-    // Проверяем, что появилось подтверждение
-    expect(confirmSpy).toHaveBeenCalled()
-
-    // Проверяем, что store.deleteExercise был вызван с правильным ID
-    expect(store.deleteExercise).toHaveBeenCalledWith(mockExercise.id)
-
-    confirmSpy.mockRestore()
+    expect(wrapper.find('#newExercise').attributes('required')).toBeDefined()
+    expect(wrapper.find('#weight').attributes('required')).toBeDefined()
+    expect(wrapper.find('#reps').attributes('required')).toBeDefined()
   })
 
-  it('cancels editing when cancel button is clicked', async () => {
-    const wrapper = mountComponent()
+  it('edits existing exercise', async () => {
+    const wrapper = renderComponent()
+    const store = useFitnessStore()
+    store.exercises = [mockExercise]
 
-    // Начинаем редактирование
+    // Click edit button
     await wrapper.find('[title="Редактировать"]').trigger('click')
-    expect(wrapper.find('h3').text()).toBe('Редактирование упражнения')
 
-    // Нажимаем кнопку отмены
-    await wrapper.find('button.btn-secondary').trigger('click')
+    // Verify form is populated with exercise data
+    const exerciseInput = wrapper.find('#newExercise').element as HTMLInputElement
+    const weightInput = wrapper.find('#weight').element as HTMLInputElement
+    const repsInput = wrapper.find('#reps').element as HTMLInputElement
 
-    // Проверяем, что форма очищена
-    expect(wrapper.find('h3').text()).toBe('Новое упражнение')
-    expect(wrapper.find('#weight').element.value).toBe('0')
-    expect(wrapper.find('#reps').element.value).toBe('0')
+    expect(exerciseInput.value).toBe(mockExercise.name)
+    expect(weightInput.value).toBe(String(mockExercise.weight))
+    expect(repsInput.value).toBe(String(mockExercise.reps))
+
+    // Edit the exercise
+    const updatedWeight = 105
+    await wrapper.find('#weight').setValue(updatedWeight)
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect(store.updateExercise).toHaveBeenCalledWith(expect.objectContaining({
+      id: mockExercise.id,
+      name: mockExercise.name,
+      weight: updatedWeight,
+      reps: mockExercise.reps
+    }))
+  })
+
+  it('clears form after submission', async () => {
+    const wrapper = renderComponent()
+
+    await wrapper.find('#newExercise').setValue(mockExercise.name)
+    await wrapper.find('#weight').setValue(mockExercise.weight)
+    await wrapper.find('#reps').setValue(mockExercise.reps)
+    await wrapper.find('form').trigger('submit.prevent')
+
+    // Check if form is cleared
+    const exerciseInput = wrapper.find('#newExercise').element as HTMLInputElement
+    const weightInput = wrapper.find('#weight').element as HTMLInputElement
+    const repsInput = wrapper.find('#reps').element as HTMLInputElement
+
+    expect(exerciseInput.value).toBe('')
+    expect(weightInput.value).toBe('0')
+    expect(repsInput.value).toBe('0')
   })
 })

@@ -14,11 +14,16 @@ vi.mock('vue-chartjs', () => ({
 
 describe('AnalyticsView', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    const pinia = createPinia()
+    setActivePinia(pinia)
   })
 
   it('renders properly with no data', () => {
-    const wrapper = mount(AnalyticsView)
+    const wrapper = mount(AnalyticsView, {
+      global: {
+        plugins: [createPinia()]
+      }
+    })
     expect(wrapper.find('.analytics').exists()).toBe(true)
 
     // Проверяем наличие всех трех графиков
@@ -34,14 +39,17 @@ describe('AnalyticsView', () => {
   })
 
   it('displays weight chart and stats when weight data is available', async () => {
+    const wrapper = mount(AnalyticsView, {
+      global: {
+        plugins: [createPinia()]
+      }
+    })
     const store = useFitnessStore()
     const date = new Date().toISOString().split('T')[0]
     store.addMeasurement({
       date,
       weight: 70
     })
-
-    const wrapper = mount(AnalyticsView)
 
     // Проверяем отображение графика веса
     const weightChart = wrapper.findAll('.chart-card')[0]
@@ -58,6 +66,11 @@ describe('AnalyticsView', () => {
   })
 
   it('displays body composition data when available', async () => {
+    const wrapper = mount(AnalyticsView, {
+      global: {
+        plugins: [createPinia()]
+      }
+    })
     const store = useFitnessStore()
     const date = new Date().toISOString().split('T')[0]
     store.addMeasurement({
@@ -67,8 +80,6 @@ describe('AnalyticsView', () => {
       bonePercentage: 10,
       waterPercentage: 30
     })
-
-    const wrapper = mount(AnalyticsView)
 
     // Проверяем отображение графика состава тела
     const bodyCompositionChart = wrapper.findAll('.chart-card')[1]
@@ -86,6 +97,11 @@ describe('AnalyticsView', () => {
   })
 
   it('filters measurements by time range', async () => {
+    const wrapper = mount(AnalyticsView, {
+      global: {
+        plugins: [createPinia()]
+      }
+    })
     const store = useFitnessStore()
     const today = new Date()
     const thirtyDaysAgo = new Date()
@@ -101,8 +117,6 @@ describe('AnalyticsView', () => {
       weight: 71
     })
 
-    const wrapper = mount(AnalyticsView)
-
     // По умолчанию выбран период 30 дней - должны видеть оба измерения
     expect(wrapper.find('.stat-card .change').text()).toContain('-1')
 
@@ -116,6 +130,11 @@ describe('AnalyticsView', () => {
   })
 
   it('calculates change in measurements correctly', async () => {
+    const wrapper = mount(AnalyticsView, {
+      global: {
+        plugins: [createPinia()]
+      }
+    })
     const store = useFitnessStore()
     const today = new Date()
     const monthAgo = new Date()
@@ -136,8 +155,6 @@ describe('AnalyticsView', () => {
       musclePercentage: 40,
       tdee: 2500
     })
-
-    const wrapper = mount(AnalyticsView)
 
     // Проверяем расчет изменений
     const statsCards = wrapper.findAll('.stat-card')
