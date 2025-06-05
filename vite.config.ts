@@ -15,7 +15,49 @@ export default defineConfig({
     // PWA только для веб-версии
     ...(!isMobileApp ? [
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
+        manifest: {
+          name: 'FitTracker',
+          short_name: 'FitTracker',
+          description: 'Track your fitness progress',
+          theme_color: '#4CAF50',
+          background_color: '#ffffff',
+          display: 'standalone',
+          orientation: 'portrait',
+          start_url: '/FitTracker/',
+          scope: '/FitTracker/',
+          icons: [
+            {
+              src: '/FitTracker/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: '/FitTracker/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png'
+            },
+            {
+              src: '/FitTracker/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable'
+            }
+          ],
+          screenshots: [
+            {
+              src: '/FitTracker/screenshot-desktop.png',
+              sizes: '1920x1080',
+              type: 'image/png',
+              form_factor: 'wide'
+            },
+            {
+              src: '/FitTracker/screenshot-mobile.png',
+              sizes: '750x1334',
+              type: 'image/png'
+            }
+          ]
+        },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           runtimeCaching: [
@@ -35,26 +77,11 @@ export default defineConfig({
             }
           ]
         },
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
-        manifest: {
-          name: 'FitTracker',
-          short_name: 'FitTracker',
-          description: 'Track your fitness progress',
-          theme_color: '#ffffff',
-          icons: [
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable'
-            }
-          ]
-        }
+        devOptions: {
+          enabled: true,
+          type: 'module'
+        },
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg']
       })
     ] : [])
   ],

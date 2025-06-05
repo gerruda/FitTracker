@@ -42,16 +42,16 @@
                   {{ exercise }}
                 </option>
               </select>
-              <input
+            <input
                 v-if="isEditing || !exerciseData.name || !uniqueExercises.includes(exerciseData.name)"
-                type="text"
+              type="text"
                 id="newExercise"
-                v-model="exerciseData.name"
-                class="form-control"
+              v-model="exerciseData.name"
+              class="form-control"
                 :readonly="isEditing"
                 placeholder="Введите название упражнения"
-                required
-              />
+              required
+            />
             </div>
           </div>
 
@@ -115,9 +115,9 @@
                   <button class="btn btn-icon" @click="editExercise(exercise)" title="Редактировать">
                     <span>✏️</span>
                   </button>
-                  <button class="btn btn-icon" @click="deleteExercise(exercise.id)" title="Удалить">
-                    <span>🗑️</span>
-                  </button>
+                <button class="btn btn-icon" @click="deleteExercise(exercise.id)" title="Удалить">
+                  <span>🗑️</span>
+                </button>
                 </div>
               </div>
               <div class="exercise-details">
@@ -202,7 +202,7 @@ const handleSubmit = () => {
   if (isEditing.value) {
     store.updateExercise(exercise)
   } else {
-    store.addExercise(exercise)
+  store.addExercise(exercise)
   }
 
   selectedExercise.value = exercise.name
@@ -223,7 +223,7 @@ const editExercise = (exercise: ExerciseData) => {
 
 const deleteExercise = (id: string) => {
   if (confirm('Вы уверены, что хотите удалить это упражнение?')) {
-    store.deleteExercise(id)
+  store.deleteExercise(id)
   }
 }
 
